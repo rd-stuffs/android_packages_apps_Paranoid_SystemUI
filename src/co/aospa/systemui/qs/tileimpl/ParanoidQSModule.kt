@@ -26,6 +26,7 @@ import co.aospa.systemui.qs.tiles.DcDimmingTile;
 import co.aospa.systemui.qs.tiles.HeadsUpTile;
 import co.aospa.systemui.qs.tiles.PowerShareTile;
 import co.aospa.systemui.qs.tiles.RefreshRateTile;
+import co.aospa.systemui.qs.tiles.UsbTetherTile;
 import co.aospa.systemui.qs.tiles.WifiTile
 import dagger.Binds
 import dagger.Module
@@ -88,5 +89,11 @@ interface ParanoidQSModule {
     @IntoMap
     @StringKey(WifiTile.TILE_SPEC)
     fun bindWifiTile(wifiTile: WifiTile): QSTileImpl<*>
+
+    /** Inject UsbTetherTile into tileMap in QSModule */
+    @Binds
+    @IntoMap
+    @StringKey(UsbTetherTile.TILE_SPEC)
+    fun bindUsbTetherTile(usbTetherTile: UsbTetherTile): QSTileImpl<*>
 
 }
