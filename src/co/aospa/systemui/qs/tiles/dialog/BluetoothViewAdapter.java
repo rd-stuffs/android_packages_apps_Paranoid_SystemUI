@@ -17,12 +17,15 @@
 
 package co.aospa.systemui.qs.tiles.dialog;
 
+import android.bluetooth.BluetoothProfile;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.TypedArray;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
+import android.text.Html;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -39,13 +42,17 @@ import com.android.settingslib.Utils;
 import com.android.settingslib.bluetooth.CachedBluetoothDevice;
 import com.android.systemui.R;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Adapter for showing bluetooth devices.
  */
 public class BluetoothViewAdapter extends
         RecyclerView.Adapter<BluetoothViewAdapter.BluetoothViewHolder> {
+
+    private static final String TAG = "BluetoothViewAdapter";
 
     private static final String DEVICE_DETAIL_INTENT =
             "com.android.settings.BLUETOOTH_DEVICE_DETAIL_SETTINGS";
@@ -54,14 +61,14 @@ public class BluetoothViewAdapter extends
 
     @Nullable
     private List<CachedBluetoothDevice> mDevices;
-    private int mDevicesCount;
-    private int mMaxDevicesCount = BluetoothDialog.MAX_DEVICES_COUNT;
+    protected int mDevicesCount;
+    protected int mMaxDevicesCount = BluetoothDialog.MAX_DEVICES_COUNT;
     private CachedBluetoothDevice mActiveDevice;
 
     private BluetoothDialog mDialog;
 
-    private View mHolderView;
-    private Context mContext;
+    protected View mHolderView;
+    protected Context mContext;
 
     public BluetoothViewAdapter(BluetoothDialog dialog) {
         mDialog = dialog;
@@ -82,7 +89,7 @@ public class BluetoothViewAdapter extends
             return;
         }
         CachedBluetoothDevice device = mDevices.get(position);
-        final boolean isActive = mActiveDevice != null && position == 0;
+        boolean isActive = mActiveDevice != null && position == 0;
         if (isActive) {
             device = mActiveDevice;
         } else if (device == mActiveDevice) {
@@ -97,20 +104,18 @@ public class BluetoothViewAdapter extends
      * @param devices the updated bluetooth devices.
      */
     public void setBluetoothDevices(List<CachedBluetoothDevice> devices) {
-        if (mDevices == devices) {
-            return;
+        if (mDevices != devices) {
+            mDevices = devices;
+            mDevicesCount = Math.min(devices.size(), mMaxDevicesCount);
+            notifyDataSetChanged();
         }
-        mDevices = devices;
-        mDevicesCount = Math.min(devices.size(), mMaxDevicesCount);
-        notifyDataSetChanged();
     }
 
     public void setActiveDevice(@Nullable CachedBluetoothDevice device) {
-        if (mActiveDevice == device) {
-            return;
+        if (mActiveDevice != device) {
+            mActiveDevice = device;
+            notifyDataSetChanged();
         }
-        mActiveDevice = device;
-        notifyDataSetChanged();
     }
 
     /**
@@ -128,12 +133,19 @@ public class BluetoothViewAdapter extends
      */
     static class BluetoothViewHolder extends RecyclerView.ViewHolder {
 
-        private final LinearLayout mContainerLayout, mBluetoothListLayout, mBluetoothDeviceLayout;
-        private final ImageView mBluetoothIcon, mBluetoothEndIcon;
-        private final TextView mBluetoothTitleText, mBluetoothSummaryText;
-        private final Context mContext;
-        private final Drawable mBackgroundOn, mBackgroundOff;
-        private final BluetoothDialog mDialog;
+        final LinearLayout mContainerLayout;
+        final LinearLayout mBluetoothListLayout;
+        final LinearLayout mBluetoothDeviceLayout;
+        final ImageView mBluetoothIcon;
+        final TextView mBluetoothTitleText;
+        final TextView mBluetoothSummaryText;
+        final ImageView mBluetoothEndIcon;
+        final Context mContext;
+
+        final Drawable mBackgroundOn;
+        final Drawable mBackgroundOff;
+
+        final BluetoothDialog mDialog;
 
         BluetoothViewHolder(View view, BluetoothDialog dialog) {
             super(view);
@@ -148,9 +160,12 @@ public class BluetoothViewAdapter extends
             mBluetoothEndIcon = view.requireViewById(R.id.bluetooth_end_icon);
             mBackgroundOn = mContext.getDrawable(R.drawable.settingslib_switch_bar_bg_on);
 
-            try (final TypedArray typedArray = mContext.obtainStyledAttributes(
-                    new int[]{android.R.attr.selectableItemBackground})) {
+            TypedArray typedArray = mContext.obtainStyledAttributes(
+                    new int[]{android.R.attr.selectableItemBackground});
+            try {
                 mBackgroundOff = typedArray.getDrawable(0 /* index */);
+            } finally {
+                typedArray.recycle();
             }
         }
 
@@ -181,8 +196,8 @@ public class BluetoothViewAdapter extends
                     : R.style.TextAppearance_InternetDialog);
 
             // summary
-            final String summary = device.getConnectionSummary();
-            final boolean showSummary = !TextUtils.isEmpty(summary);
+            String summary = device.getConnectionSummary();
+            boolean showSummary = !TextUtils.isEmpty(summary);
             if (showSummary) {
                 mBluetoothSummaryText.setText(summary);
                 mBluetoothSummaryText.setTextAppearance(isActive
@@ -191,11 +206,11 @@ public class BluetoothViewAdapter extends
             }
             mBluetoothSummaryText.setVisibility(showSummary ? View.VISIBLE : View.GONE);
 
-            final int iconColor = isActive ? mContext.getColor(R.color.connected_network_primary_color)
+            int iconColor = isActive ? mContext.getColor(R.color.connected_network_primary_color)
                     : Utils.getColorAttrDefaultColor(mContext, android.R.attr.colorControlNormal);
             mBluetoothEndIcon.setColorFilter(iconColor);
 
-            final Bundle args = new Bundle(1);
+            final Bundle args = new Bundle();
             args.putString(KEY_DEVICE_ADDRESS, device.getAddress());
             mBluetoothEndIcon.setOnClickListener(v -> {
                 mDialog.startActivity(new Intent(DEVICE_DETAIL_INTENT)
