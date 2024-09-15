@@ -49,6 +49,7 @@ public class BluetoothDialogTile extends BluetoothTile {
     public static final String TILE_SPEC = "bt";
 
     private final Handler mHandler;
+    private final BluetoothController mBluetoothController;
     private final BluetoothDialogFactory mBluetoothDialogFactory;
 
     @Inject
@@ -70,6 +71,7 @@ public class BluetoothDialogTile extends BluetoothTile {
                 statusBarStateController, activityStarter, qsLogger, bluetoothController,
                 keyguardStateController);
         mHandler = mainHandler;
+        mBluetoothController = bluetoothController;
         mBluetoothDialogFactory = bluetoothDialogFactory;
     }
 
@@ -85,7 +87,9 @@ public class BluetoothDialogTile extends BluetoothTile {
         if (checkKeyguard(view, keyguardShowing)) {
             return;
         }
-
+        if (!mBluetoothController.isBluetoothEnabled()) {
+            mBluetoothController.setBluetoothEnabled(true);
+        }
         mHandler.post(() -> mBluetoothDialogFactory.create(true, view));
     }
 }
